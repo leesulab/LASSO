@@ -1,0 +1,43 @@
+# Donnees volumineuses ou sensibles
+data/raw/*
+data/parquet/*
+data/processed/*
+data/reference/*
+!data/**/README.md
+
+# Documents externes ou potentiellement soumis au droit d'auteur
+Doc/
+Doc/*.pdf
+
+# Depots externes clones localement
+repos/*
+!repos/README.md
+
+# Environnements Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# R / RStudio
+.Rhistory
+.RData
+.Rproj.user/
+renv/library/
+
+# Secrets de deploiement local
+.env
+.env.*
+!.env.example
+
+# Bases locales et exports
+*.duckdb
+*.sqlite
+*.parquet
+*.csv
+*.tsv
+*.rds
+
+# Systeme
+.DS_Store
+Thumbs.db
