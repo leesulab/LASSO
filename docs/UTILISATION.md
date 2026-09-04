@@ -55,6 +55,66 @@ bash scripts/run_local.sh
 
 Ouvrir `http://127.0.0.1:7660`. La cle ou le disque contenant les donnees doit rester branche pendant l'utilisation.
 
+### Configurer le dossier de donnees (`DATA_PATH`)
+
+Le repertoire du depot `LASSO` contient le code de l'application. Il est distinct
+du repertoire des donnees, qui contient les dossiers annuels, les fichiers JSON
+et les fichiers Parquet. Il ne faut ni copier les donnees dans le depot Git, ni
+deplacer le depot pour changer de source de donnees.
+
+Si le lancement affiche par exemple :
+
+```text
+DATA_PATH does not exist: /media/data/observatoire
+```
+
+cela signifie seulement que le chemin indique dans `.env` n'existe pas sur la
+machine en cours d'utilisation. Deux solutions sont possibles :
+
+1. Monter ou brancher le disque de donnees a l'emplacement deja configure,
+   par exemple `/media/data/observatoire`. Aucun changement dans `.env` n'est
+   alors necessaire.
+2. Modifier `DATA_PATH` dans `.env` pour qu'il corresponde a l'emplacement
+   reel du disque ou du dossier de donnees. C'est la solution recommandee pour
+   une cle USB, car son nom ou son point de montage peut changer d'une machine
+   a l'autre.
+
+Pour rechercher le chemin reel d'une cle montee sous Linux :
+
+```bash
+ls /media/$USER
+find /media/$USER -maxdepth 3 -type d \( -iname '*observatoire*' -o -iname '*obsevatoire*' \)
+```
+
+Puis editer la configuration locale :
+
+```bash
+nano .env
+```
+
+Par exemple, si la commande precedente retourne
+`/media/boudahmane/NOM_DU_DISQUE/observatoire-db`, utiliser :
+
+```text
+DATA_PATH=/media/boudahmane/NOM_DU_DISQUE/observatoire-db
+```
+
+Enregistrer avec `Ctrl+O`, `Entree`, puis quitter avec `Ctrl+X`. Verifier avant
+de lancer l'application que ce dossier contient bien des Parquet :
+
+```bash
+set -a
+source .env
+set +a
+find "$DATA_PATH" -type f -iname '*.parquet' | head
+bash scripts/run_local.sh
+```
+
+Ne pas creer artificiellement le dossier `/media/data/observatoire` s'il ne
+contient pas les donnees : cela ferait disparaitre le message d'erreur sans
+donner acces aux fichiers. Le fichier `.env` reste propre a chaque machine et
+ne doit pas etre ajoute a Git.
+
 ## Parcours recommande
 
 1. Verifier les fichiers disponibles dans `Catalogue`, puis utiliser `Ajouter selection` ou `Ajouter tout`.

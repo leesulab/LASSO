@@ -33,7 +33,8 @@ Ouvrir ensuite `http://127.0.0.1:7660`.
 `DATA_PATH` peut pointer vers un disque monte localement, par exemple
 `/media/data/observatoire`, ou vers tout dossier contenant l'arborescence des
 JSON et Parquet. Les fichiers Parquet et les donnees de reference ne sont pas
-inclus dans le depot.
+inclus dans le depot. En cas d'erreur `DATA_PATH does not exist`, consulter la
+section [Configurer le dossier de donnees](docs/UTILISATION.md#configurer-le-dossier-de-donnees-data_path) : le depot de code et le dossier de donnees sont distincts.
 
 ## Utiliser l'application
 
