@@ -6,15 +6,20 @@ Ce depot contient le prototype R/Shiny de l'Observatoire HRMS. Il doit rester re
 
 Pour reprendre le projet apres une interruption, commencer par
 [Maintenance et reprise du projet](MAINTENANCE.md). Pour toute evolution du
-niveau de confiance 3, suivre exclusivement la procedure de
+preuve de screening 3, suivre exclusivement la procedure de
 [Niveau 3 de mobilite](NIVEAU_3_MOBILITE.md) avant de modifier le moteur de
 screening.
+
+Les comparaisons de fragments MS2 sont decrites dans
+[Comparaison MS2](MS2_REFERENCE.md). Elles restent distinctes des preuves de
+screening et des futurs niveaux d'identification publies.
 
 ## Structure utile
 
 ```text
 app/app.R                       interface et logique Shiny
 scripts/parquet_chromatograms.R calculs TIC, BPI, EIC et screening
+scripts/ms2_reference_spectra.R import et comparaison exploratoire MS2
 scripts/nextcloud_public_webdav.R acces Nextcloud/WebDAV
 scripts/build_metadata_index.R  index JSON vers Parquet
 scripts/build_compounds_reference.R preparation des etalons
@@ -36,6 +41,7 @@ Lancer les tests depuis la racine :
 
 ```bash
 Rscript tests/test_chromatograms.R
+Rscript tests/test_ms2_reference_spectra.R
 Rscript tests/test_app_server.R
 Rscript tests/test_nextcloud_webdav.R
 ```
@@ -72,6 +78,8 @@ Les JSON associes sont indexes par leur chemin relatif. Un JSON situe dans `2024
 - conserver le traitement par fichier et les filtres Arrow/DuckDB afin de ne pas charger les Parquet entiers en memoire ;
 - garder les valeurs brutes, le signal corrige du blanc et les valeurs normalisees dans les exports ;
 - ne pas promouvoir une verification de mobilite au niveau de confiance 3 sans validation analytique ;
+- ne pas transformer un score MS2 en identification publiee sans bibliotheque,
+  seuils et regles valides ;
 - documenter toute nouvelle colonne, tolerance ou regle de decision dans ce dossier `docs/`.
 
 ## Ajouter une fonctionnalite

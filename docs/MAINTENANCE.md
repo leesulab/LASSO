@@ -33,6 +33,7 @@ Les responsabilites principales sont les suivantes :
 | --- | --- |
 | `app/app.R` | Interface Shiny, etat de session, selection des fichiers, affichage et exports. |
 | `scripts/parquet_chromatograms.R` | Requetes Arrow/DuckDB, TIC, BPI, EIC, screening et niveaux de confiance. |
+| `scripts/ms2_reference_spectra.R` | Import CSV et comparaison exploratoire des fragments MS2. |
 | `scripts/nextcloud_public_webdav.R` | Navigation et lecture distante Nextcloud/WebDAV. |
 | `scripts/build_metadata_index.R` | Transformation JSON vers index local des fichiers. |
 | `scripts/build_compounds_reference.R` | Normalisation de la liste d'etalons ou de suspects. |
@@ -66,6 +67,7 @@ decision explicite de l'equipe.
 
 ```bash
 Rscript tests/test_chromatograms.R
+Rscript tests/test_ms2_reference_spectra.R
 Rscript tests/test_app_server.R
 Rscript tests/test_nextcloud_webdav.R
 ```
@@ -91,20 +93,24 @@ car il depend de donnees analytiques absentes du depot.
 - Les resultats exportes doivent conserver les valeurs brutes, corrigees du
   blanc et normalisees, ainsi que les parametres de calcul.
 
-## Niveaux de confiance
+## Preuves de screening
 
-Le moteur distingue les preuves suivantes :
+Le moteur distingue les preuves internes suivantes :
 
 ```text
-Niveau 0 : aucun signal retenu
-Niveau 1 : m/z et intensite compatibles
-Niveau 2 : m/z, RT et intensite compatibles
-Niveau 3 : niveau 2 et preuve de mobilite validee
+Preuve 0 : aucun signal retenu
+Preuve 1 : m/z et intensite compatibles
+Preuve 2 : m/z, RT et intensite compatibles
+Preuve 3 : preuve 2 et preuve de mobilite validee
 ```
 
 La mobilite via CCS vers DT est actuellement exportee comme resultat
-exploratoire. Ne pas la promouvoir au niveau 3 sans validation analytique. La
+exploratoire. Ne pas la promouvoir a la preuve 3 sans validation analytique. La
 procedure complete est dans [Niveau 3 de mobilite](NIVEAU_3_MOBILITE.md).
+
+Ces preuves ne sont pas des niveaux d'identification publies. La comparaison
+MS2 dispose de son propre module et de ses limites dans
+[Comparaison MS2](MS2_REFERENCE.md).
 
 ## Deploiement
 

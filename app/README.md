@@ -17,6 +17,7 @@ Ce prototype lit :
 ```text
 data/processed/metadata_index.csv
 data/processed/compounds_reference.csv
+data/processed/ms2_reference_spectra.csv (facultatif)
 ```
 
 Il affiche :
@@ -37,7 +38,7 @@ L'onglet `Parquet` permet d'inspecter et de screener un fichier courant. L'ongle
 
 Un export `screening_lot_*.csv` peut etre reimporte dans `Plan screening`. Cela restaure les resultats et les vues de suivi sans relire les Parquet. Les chemins et identifiants Nextcloud ne sont pas restaures comme une session de connexion : l'import sert a analyser un lot deja calcule, pas a relancer ce lot.
 
-Dans les resultats du lot, une ligne peut etre selectionnee puis envoyee vers `Parquet` avec `Preparer EIC`. L'application prepare alors le fichier, le mode, le niveau MS, le m/z, la RT et les tolerances utilises pour cette recherche. Le calcul reste volontairement declenche par l'utilisateur avec `Lire les infos`, puis `Calculer EIC` ou `Afficher spectre MS2`. Le spectre MS2 est une vue brute des signaux MS2 de la fenetre RT ; il n'est pas encore compare a un spectre de reference. Pour un export reimporte, le Parquet correspondant doit de nouveau etre disponible dans le catalogue local ou Nextcloud.
+Dans les resultats du lot, une ligne peut etre selectionnee puis envoyee vers `Parquet` avec `Preparer EIC`. L'application prepare alors le fichier, le mode, le niveau MS, le m/z, la RT et les tolerances utilises pour cette recherche. Le calcul reste volontairement declenche par l'utilisateur avec `Lire les infos`, puis `Calculer EIC` ou `Afficher spectre MS2`. Un spectre MS2 brut peut ensuite etre compare a une reference importee, fragment par fragment. Cette comparaison reste exploratoire, ne modifie pas le resultat de screening et ne constitue pas une identification a elle seule. Pour un export reimporte, le Parquet correspondant doit de nouveau etre disponible dans le catalogue local ou Nextcloud.
 
 La meme ligne peut etre envoyee vers `Suivi molecules` avec `Suivre molecule`. Cette vue filtre directement le lot sur la molecule et le mode concernes, afin de comparer les echantillons, blancs, injections et duplicats. Elle reste utilisable apres reimport d'un export CSV, car elle utilise les resultats deja calcules.
 
@@ -81,14 +82,18 @@ L'onglet `Parquet` ouvre un fichier accessible depuis la machine qui execute Shi
   masse.
 - une visualisation MS2 brute dans la fenetre RT de la molecule selectionnee,
   avec regroupement des fragments par `m/z`.
+- l'import d'une bibliotheque locale de spectres MS2 et une comparaison
+  exploratoire : fragments concordants, couverture et score cosinus.
 - des graphes TIC, BPI, EIC et MS2 interactifs, avec survol des coordonnees,
   zoom et reperage des principaux extrema locaux sur les chromatogrammes.
 - un screening du fichier courant contre les molecules du meme mode, avec niveaux de preuve `m/z`, `m/z + RT` et une preuve de mobilite quand elle est reellement disponible ;
 - un export CSV du resultat, avec les parametres de calcul.
 
-Le screening recherche les points dans la fenetre `m/z`, puis dans la fenetre RT quand l'option de coherence RT est activee. Il conserve les preuves observees, meme lorsqu'elles ne suffisent pas a la decision finale : niveau 1 pour `m/z`, niveau 2 avec RT et niveau 3 avec une preuve de mobilite directe.
+Le screening recherche les points dans la fenetre `m/z`, puis dans la fenetre RT quand l'option de coherence RT est activee. Il conserve les preuves observees, meme lorsqu'elles ne suffisent pas a la decision finale : preuve 1 pour `m/z`, preuve 2 avec RT et preuve 3 avec une preuve de mobilite directe. Ces preuves ne sont pas des niveaux d'identification publies.
 
-Par defaut, `Detected` exige le niveau 2, donc un signal dans la fenetre RT et une intensite suffisante. Le controle DT est disponible uniquement a titre exploratoire et ne constitue pas un critere de decision. Si une colonne `ccs` est presente, elle reste utilisable pour compatibilite. Pour les Parquet bruts ordinaires, la future voie est `CCS attendu + m/z + C1/C2 -> DT attendu`, puis comparaison avec le DT du pic. Le branchement est prepare mais ne sera pas utilise comme niveau de confiance avant validation de la formule et de la tolerance.
+Par defaut, `Detected` exige la preuve 2, donc un signal dans la fenetre RT et une intensite suffisante. Le controle DT est disponible uniquement a titre exploratoire et ne constitue pas un critere de decision. Si une colonne `ccs` est presente, elle reste utilisable pour compatibilite. Pour les Parquet bruts ordinaires, la future voie est `CCS attendu + m/z + C1/C2 -> DT attendu`, puis comparaison avec le DT du pic. Le branchement est prepare mais ne sera pas utilise comme preuve de mobilite avant validation de la formule et de la tolerance.
+
+Le format CSV de reference MS2, les scores affiches et les limites de cette comparaison sont documentes dans [`docs/MS2_REFERENCE.md`](../docs/MS2_REFERENCE.md).
 
 ## Suivi des molecules
 

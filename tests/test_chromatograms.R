@@ -76,7 +76,7 @@ ccs_result <- screen_compound_in_file(
   ccs_tolerance_pct = 10
 )
 stopifnot(identical(ccs_result$confidence_level[[1]], 3L))
-stopifnot(identical(ccs_result$confidence_label[[1]], "Niveau 3 - m/z + RT + mobilite"))
+stopifnot(identical(ccs_result$confidence_label[[1]], "Preuve 3 - m/z + RT + mobilite"))
 stopifnot(isTRUE(ccs_result$ccs_match[[1]]))
 stopifnot(identical(ccs_result$ccs_status[[1]], "Compatible"))
 ccs_batch_result <- screen_compounds_in_file(
@@ -187,7 +187,7 @@ level_one_result <- screen_compound_in_file(
 )
 stopifnot(identical(level_one_result$confidence_level[[1]], 1L))
 stopifnot(identical(level_one_result$status[[1]], "Not Detected"))
-stopifnot(identical(level_one_result$confidence_label[[1]], "Niveau 1 - m/z"))
+stopifnot(identical(level_one_result$confidence_label[[1]], "Preuve 1 - m/z"))
 
 # A DT mismatch must retain the RT evidence but not grant level 3.
 arrow::write_parquet(interference, temporary_parquet)

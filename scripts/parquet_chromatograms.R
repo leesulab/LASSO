@@ -918,11 +918,11 @@ confidence_label <- function(level) {
   level <- suppressWarnings(as.integer(level[[1]]))
   switch(
     as.character(level),
-    "0" = "Niveau 0 - aucun signal",
-    "1" = "Niveau 1 - m/z",
-    "2" = "Niveau 2 - m/z + RT",
-    "3" = "Niveau 3 - m/z + RT + mobilite",
-    "Niveau inconnu"
+    "0" = "Preuve 0 - aucun signal",
+    "1" = "Preuve 1 - m/z",
+    "2" = "Preuve 2 - m/z + RT",
+    "3" = "Preuve 3 - m/z + RT + mobilite",
+    "Preuve inconnue"
   )
 }
 

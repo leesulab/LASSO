@@ -81,6 +81,22 @@ Le flux cible pour les Parquet bruts est prepare dans `ccs_drift_time.R` : une f
 
 Pour un chemin local, les calculs utilisent Arrow. Pour une URL `http://` ou `https://`, le script bascule vers DuckDB et l'extension `httpfs` afin de requeter directement le Parquet distant.
 
+### `ms2_reference_spectra.R`
+
+Contient les fonctions sans interface pour importer une reference MS2 et comparer
+ses fragments au spectre observe :
+
+```text
+read_ms2_reference_csv()
+ms2_reference_spectrum()
+compare_ms2_spectrum_to_reference()
+```
+
+La comparaison calcule des fragments concordants, des couvertures et un score
+cosinus exploratoire. Elle ne doit pas etre utilisee pour attribuer un niveau
+d'identification publie sans protocole analytique valide. Le schema CSV est
+documente dans `docs/MS2_REFERENCE.md`.
+
 ### `nextcloud_public_webdav.R`
 
 Contient les fonctions de navigation Nextcloud via WebDAV, pour un partage public ou un compte :

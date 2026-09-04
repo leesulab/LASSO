@@ -123,6 +123,10 @@ ne doit pas etre ajoute a Git.
 3. Utiliser `Parquet` pour inspecter le fichier prepare. Selectionner un etalon
    ou un suspect dans `Etalon ou suspect (facultatif)` remplit son `m/z` et sa RT ; calculer ensuite
    TIC/BPI, l'EIC, ou le spectre MS2 brut dans la meme fenetre RT.
+   Un spectre MS2 de reference peut etre importe et compare aux fragments
+   observes depuis ce meme onglet. La comparaison est exploratoire et ne
+   remplace pas la validation analytique ; son format CSV et son interpretation
+   sont decrits dans [Comparaison MS2](MS2_REFERENCE.md).
    Pour un apercu immediat, saisir un `m/z recherche rapide` puis cliquer
    `Rechercher m/z et afficher EIC (MS1)`. L'application recherche cette masse
    sur tout le chromatogramme MS1 avec la tolerance EIC, sans condition de RT,
@@ -147,9 +151,10 @@ Pour une utilisation sur une machine de production, privilegier un dossier de do
 
 - `Detected` requiert actuellement une coherence `m/z + RT` et une intensite minimale.
 - La mesure `rt_area_sum` est une somme discrete des intensites EIC par scan dans la fenetre RT, pas une integration chromatographique continue.
-- Le spectre MS2 de l'onglet `Parquet` est une vue exploratoire. Il agrege les
-  signaux MS2 de la fenetre RT et ne constitue pas encore une comparaison a un
-  spectre de reference ni un critere de confiance scientifique.
+- Le spectre MS2 de l'onglet `Parquet` peut etre compare a une reference CSV,
+  mais il agrege les signaux MS2 de la fenetre RT. Cette compatibilite de
+  fragments reste exploratoire et ne constitue pas a elle seule une
+  identification ni un niveau de confiance publie.
 - Cocher `Calculer l'intensite totale MS` dans `Plan screening` uniquement si la normalisation par intensite totale doit etre utilisee ensuite ; sinon le lot evite une seconde lecture complete de chaque fichier.
 - Le controle DT est exploratoire.
 - La future verification de mobilite utilisera la conversion `CCS attendu + m/z + C1/C2 -> DT attendu`, apres validation de la formule et des parametres de calibration.

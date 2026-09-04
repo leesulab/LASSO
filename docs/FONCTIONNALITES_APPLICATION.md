@@ -97,6 +97,8 @@ L'onglet `Parquet` est destine a l'exploration d'un fichier a la fois.
 - affichage d'un spectre MS2 brut pour la molecule selectionnee : les signaux
   MS2 dans sa fenetre RT sont regroupes par `m/z`, puis les pics les plus
   intenses sont affiches ;
+- import facultatif d'un spectre de reference MS2 et comparaison explicite des
+  fragments, avec couverture et score cosinus exploratoires ;
 - screening du fichier courant contre la selection de molecules compatible
   avec son mode ;
 - export des resultats du screening du fichier.
@@ -123,31 +125,36 @@ molecules en une operation.
 - option de calcul de l'intensite totale MS pour une normalisation ulterieure ;
 - traitement sequentiel des fichiers pour limiter la memoire ;
 - poursuite du lot si un fichier echoue, avec une ligne d'erreur explicite ;
-- tableau colore des resultats avec filtres, statut et niveau de confiance ;
+- tableau colore des resultats avec filtres, statut et preuve de screening ;
 - export CSV du lot ;
 - reimport d'un export precedent sans relire les Parquet ;
 - envoi d'une ligne de resultat vers `Parquet` pour preparer son EIC ;
 - envoi d'une ligne de resultat vers `Suivi molecules`.
 
-### Statut et niveau de confiance
+### Statut et preuve de screening
 
 Pour chaque molecule, le moteur extrait les points dans la fenetre `m/z`, puis
 verifie la RT lorsque celle-ci est renseignee.
 
-| Niveau | Signification |
+| Preuve | Signification |
 | --- | --- |
 | 0 | aucun signal exploitable |
 | 1 | signal coherent en `m/z` uniquement |
 | 2 | signal coherent en `m/z + RT` |
 | 3 | signal coherent en `m/z + RT + mobilite` |
 
-Par defaut, `Detected` exige le niveau 2 et donc un signal suffisant dans la
+Par defaut, `Detected` exige la preuve 2 et donc un signal suffisant dans la
 fenetre de RT. Le statut n'est pas une identification chimique definitive : il
 indique qu'un signal est compatible avec les criteres choisis.
 
 Le controle DT est actuellement exploratoire. La future verification de
 mobilite devra convertir un CCS attendu en DT attendu a partir du `m/z` et des
 parametres de calibration `C1/C2`, puis comparer ce DT au pic observe.
+
+La comparaison MS2 est realisee dans l'onglet `Parquet` pour une molecule et
+un fichier a la fois. Elle ne modifie pas les preuves de screening tant qu'une
+regle scientifique validee n'a pas ete definie. Voir
+[Comparaison MS2](MS2_REFERENCE.md).
 
 ## Suivi des molecules dans le temps
 

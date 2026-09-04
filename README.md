@@ -40,7 +40,8 @@ section [Configurer le dossier de donnees](docs/UTILISATION.md#configurer-le-dos
 
 1. Ouvrir `Catalogue` pour filtrer les fichiers par annee, mode et type.
 2. Ajouter les fichiers retenus, puis les inspecter dans `Parquet` pour afficher
-   TIC, BPI, EIC ou un spectre MS2 exploratoire.
+   TIC, BPI, EIC ou un spectre MS2 exploratoire, avec comparaison facultative
+   a une reference importee.
 3. Importer ou choisir les etalons et suspects, puis lancer un screening courant
    ou de lot dans `Plan screening`.
 4. Consulter `Suivi molecules` pour corriger le blanc, normaliser et comparer
@@ -55,6 +56,7 @@ documentes dans [la documentation d'utilisation](docs/UTILISATION.md).
 - [Developpement et contribution](docs/DEVELOPPEMENT.md)
 - [Maintenance et reprise du projet](docs/MAINTENANCE.md)
 - [Activation future du niveau 3 de mobilite](docs/NIVEAU_3_MOBILITE.md)
+- [Comparaison MS2 avec une reference](docs/MS2_REFERENCE.md)
 - [Details fonctionnels du prototype](app/README.md)
 
 ## Contenu versionne

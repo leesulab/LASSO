@@ -41,6 +41,7 @@ metadata_file <- file.path(project_root, "data", "processed", "metadata_index.cs
 compounds_file <- file.path(project_root, "data", "processed", "compounds_reference.csv")
 ccs_drift_time_script <- file.path(project_root, "scripts", "ccs_drift_time.R")
 chromatograms_script <- file.path(project_root, "scripts", "parquet_chromatograms.R")
+ms2_reference_script <- file.path(project_root, "scripts", "ms2_reference_spectra.R")
 nextcloud_script <- file.path(project_root, "scripts", "nextcloud_public_webdav.R")
 
 if (file.exists(ccs_drift_time_script)) {
@@ -53,6 +54,12 @@ if (file.exists(chromatograms_script)) {
   source(chromatograms_script)
 } else {
   stop("Missing script: ", chromatograms_script)
+}
+
+if (file.exists(ms2_reference_script)) {
+  source(ms2_reference_script)
+} else {
+  stop("Missing script: ", ms2_reference_script)
 }
 
 if (file.exists(nextcloud_script)) {
@@ -1627,7 +1634,7 @@ plot_chromatogram <- function(x, title, y_label = "Intensity") {
   configure_interactive_plot(chart)
 }
 
-plot_ms2_spectrum <- function(x, title) {
+plot_ms2_spectrum <- function(x, title, comparison = NULL) {
   if (is.null(x) || nrow(x) == 0) {
     return(empty_interactive_plot(title, "Aucun signal MS2 dans la fenetre RT"))
   }
@@ -1666,6 +1673,54 @@ plot_ms2_spectrum <- function(x, title) {
     hoverinfo = "text",
     marker = list(color = "#215a6d", size = 5)
   )
+  if (is.list(comparison) && !is.null(comparison$matches) && nrow(comparison$matches) > 0) {
+    matches <- as.data.frame(comparison$matches, stringsAsFactors = FALSE)
+    matched <- matches[!is.na(matches$matched) & matches$matched, , drop = FALSE]
+    unmatched <- matches[is.na(matches$matched) | !matches$matched, , drop = FALSE]
+    if (nrow(matched) > 0) {
+      matched$hover_text <- paste0(
+        "<b>Fragment reference concordant</b>",
+        "<br>m/z reference: ", format_plot_number(matched$reference_fragment_mz, digits = 6),
+        "<br>m/z observe: ", format_plot_number(matched$observed_fragment_mz, digits = 6),
+        "<br>Erreur: ", format_plot_number(matched$mz_error_da, digits = 6), " Da",
+        "<br>Intensite observee: ", format_plot_number(matched$observed_intensity, digits = 8)
+      )
+      chart <- plotly::add_markers(
+        chart,
+        data = matched,
+        inherit = FALSE,
+        x = ~observed_fragment_mz,
+        y = ~observed_intensity,
+        type = "scatter",
+        mode = "markers",
+        name = "Fragments reference concordants",
+        text = ~hover_text,
+        hoverinfo = "text",
+        marker = list(color = "#1e8f4d", symbol = "circle-open", size = 13, line = list(width = 2))
+      )
+    }
+    if (nrow(unmatched) > 0) {
+      unmatched$baseline <- 0
+      unmatched$hover_text <- paste0(
+        "<b>Fragment reference non observe</b>",
+        "<br>m/z reference: ", format_plot_number(unmatched$reference_fragment_mz, digits = 6),
+        "<br>Intensite relative reference: ", format_plot_number(unmatched$reference_relative_intensity, digits = 3), "%"
+      )
+      chart <- plotly::add_markers(
+        chart,
+        data = unmatched,
+        inherit = FALSE,
+        x = ~reference_fragment_mz,
+        y = ~baseline,
+        type = "scatter",
+        mode = "markers",
+        name = "Fragments reference non observes",
+        text = ~hover_text,
+        hoverinfo = "text",
+        marker = list(color = "#c83a32", symbol = "x", size = 10)
+      )
+    }
+  }
   top_peak <- x[which.max(x$intensity), , drop = FALSE]
   top_peak$hover_text <- paste0("<b>Fragment le plus intense</b><br>", top_peak$hover_text)
   chart <- plotly::add_markers(
@@ -2193,6 +2248,8 @@ compound_identity_key <- function(x) {
 
 metadata_index <- read_app_csv(metadata_file)
 compounds_reference <- read_app_csv(compounds_file)
+ms2_reference_file <- file.path(project_root, "data", "processed", "ms2_reference_spectra.csv")
+default_ms2_reference_spectra <- load_optional_ms2_reference_spectra(ms2_reference_file)
 parquet_root <- default_parquet_root()
 
 metadata_index$app_file_id <- paste0("file_", seq_len(nrow(metadata_index)))
@@ -2643,6 +2700,30 @@ ui <- page_navbar(
         numericInput("ms2_top_n", "Pics MS2 affiches", value = 150, min = 10, max = 1000, step = 10),
         actionButton("compute_ms2_spectrum", "Afficher spectre MS2", icon = icon("chart-bar"), class = "btn-outline-primary"),
         tags$hr(),
+        selectInput("ms2_reference_id", "Spectre MS2 de reference", choices = c("Aucun spectre de reference importe" = "")),
+        fileInput(
+          "import_ms2_reference_csv",
+          "Importer spectres MS2 CSV",
+          accept = c(".csv", "text/csv", "text/plain"),
+          width = "100%"
+        ),
+        div(class = "path-output", textOutput("ms2_reference_library_status")),
+        div(
+          class = "action-stack",
+          downloadButton("download_ms2_reference_template", "Modele CSV MS2", icon = icon("download"), class = "btn-outline-secondary"),
+          actionButton("reset_ms2_reference_library", "Revenir aux references locales", icon = icon("rotate-left"), class = "btn-outline-secondary")
+        ),
+        numericInput("ms2_match_mz_tolerance", "Tolerance fragments m/z", value = 0.01, min = 0.0001, step = 0.001),
+        numericInput("ms2_min_matched_fragments", "Fragments concordants minimum", value = 3, min = 1, max = 100, step = 1),
+        numericInput("ms2_min_cosine_similarity", "Score cosinus minimum", value = 0.7, min = 0, max = 1, step = 0.05),
+        actionButton(
+          "compare_ms2_spectrum",
+          "Comparer au spectre de reference",
+          icon = icon("magnifying-glass-chart"),
+          class = "btn-outline-primary",
+          title = "Comparer les fragments observes au spectre de reference selectionne"
+        ),
+        tags$hr(),
         checkboxInput("screen_selected_compounds_only", "Selection de screening seulement", value = FALSE),
         checkboxInput("screen_require_rt_match", "Exiger RT coherent", value = TRUE),
         numericInput("screening_min_intensity", "Intensite min screening", value = 1000, min = 0, step = 100),
@@ -2728,16 +2809,26 @@ ui <- page_navbar(
             plotly::plotlyOutput("ms2_spectrum_plot", height = "520px"),
             DTOutput("ms2_spectrum_table", height = "320px")
           )
+        ),
+        card(
+          full_screen = TRUE,
+          fill = FALSE,
+          class = "table-card",
+          card_header("Comparaison MS2 au spectre de reference (exploratoire)"),
+          card_body(
+            DTOutput("ms2_comparison_summary_table", height = "150px"),
+            DTOutput("ms2_comparison_table", height = "360px")
+          )
         )
       ),
       layout_column_wrap(
         width = 1 / 5,
         fill = FALSE,
         fillable = FALSE,
-        card(fill = FALSE, class = "metric metric-not-detected", card_body(div(class = "value", textOutput("screening_not_detected_count")), div(class = "label", "Niveau 0"))),
-        card(fill = FALSE, class = "metric metric-level-1", card_body(div(class = "value", textOutput("screening_level_one_count")), div(class = "label", "Niveau 1 - m/z"))),
-        card(fill = FALSE, class = "metric metric-level-2", card_body(div(class = "value", textOutput("screening_level_two_count")), div(class = "label", "Niveau 2 - m/z + RT"))),
-          card(fill = FALSE, class = "metric metric-level-3", card_body(div(class = "value", textOutput("screening_level_three_count")), div(class = "label", "Niveau 3 - mobilite"))),
+        card(fill = FALSE, class = "metric metric-not-detected", card_body(div(class = "value", textOutput("screening_not_detected_count")), div(class = "label", "Preuve 0"))),
+        card(fill = FALSE, class = "metric metric-level-1", card_body(div(class = "value", textOutput("screening_level_one_count")), div(class = "label", "Preuve 1 - m/z"))),
+        card(fill = FALSE, class = "metric metric-level-2", card_body(div(class = "value", textOutput("screening_level_two_count")), div(class = "label", "Preuve 2 - m/z + RT"))),
+          card(fill = FALSE, class = "metric metric-level-3", card_body(div(class = "value", textOutput("screening_level_three_count")), div(class = "label", "Preuve 3 - mobilite"))),
         card(fill = FALSE, class = "metric metric-detected", card_body(div(class = "value", textOutput("screening_detected_count")), div(class = "label", "Detected retenus")))
       ),
       card(
@@ -2880,10 +2971,10 @@ ui <- page_navbar(
         width = 1 / 5,
         card(class = "metric", card_body(div(class = "value", textOutput("batch_result_files")), div(class = "label", "Fichiers traites"))),
         card(class = "metric", card_body(div(class = "value", textOutput("batch_result_rows")), div(class = "label", "Resultats"))),
-        card(class = "metric metric-not-detected", card_body(div(class = "value", textOutput("batch_level_zero_count")), div(class = "label", "Niveau 0"))),
-        card(class = "metric metric-level-1", card_body(div(class = "value", textOutput("batch_level_one_count")), div(class = "label", "Niveau 1 - m/z"))),
-        card(class = "metric metric-level-2", card_body(div(class = "value", textOutput("batch_level_two_count")), div(class = "label", "Niveau 2 - m/z + RT"))),
-        card(class = "metric metric-level-3", card_body(div(class = "value", textOutput("batch_level_three_count")), div(class = "label", "Niveau 3 - mobilite"))),
+        card(class = "metric metric-not-detected", card_body(div(class = "value", textOutput("batch_level_zero_count")), div(class = "label", "Preuve 0"))),
+        card(class = "metric metric-level-1", card_body(div(class = "value", textOutput("batch_level_one_count")), div(class = "label", "Preuve 1 - m/z"))),
+        card(class = "metric metric-level-2", card_body(div(class = "value", textOutput("batch_level_two_count")), div(class = "label", "Preuve 2 - m/z + RT"))),
+        card(class = "metric metric-level-3", card_body(div(class = "value", textOutput("batch_level_three_count")), div(class = "label", "Preuve 3 - mobilite"))),
         card(class = "metric metric-detected", card_body(div(class = "value", textOutput("batch_detected_count")), div(class = "label", "Detected retenus"))),
         card(class = "metric metric-error", card_body(div(class = "value", textOutput("batch_error_count")), div(class = "label", "Erreurs")))
       ),
@@ -3101,6 +3192,8 @@ server <- function(input, output, session) {
   quick_eic_result <- reactiveVal(NULL)
   ms2_spectrum_data <- reactiveVal(NULL)
   ms2_spectrum_context <- reactiveVal(NULL)
+  ms2_reference_catalog <- reactiveVal(default_ms2_reference_spectra)
+  ms2_reference_comparison <- reactiveVal(NULL)
   screening_results <- reactiveVal(NULL)
   control_parquet_info <- reactiveVal(NULL)
   control_parquet_error <- reactiveVal(NULL)
@@ -3513,6 +3606,7 @@ server <- function(input, output, session) {
     quick_eic_result(NULL)
     ms2_spectrum_data(NULL)
     ms2_spectrum_context(NULL)
+    ms2_reference_comparison(NULL)
     screening_results(NULL)
   }
 
@@ -3836,6 +3930,13 @@ server <- function(input, output, session) {
     catalog[catalog$app_compound_id == id, , drop = FALSE]
   })
 
+  selected_ms2_reference <- reactive({
+    ms2_reference_spectrum(
+      ms2_reference_catalog(),
+      input$ms2_reference_id %||% ""
+    )
+  })
+
   calculate_eic_result <- function(source, target_mz, expected_rt, mz_tolerance, rt_tolerance,
                                    min_intensity, mslevel, restrict_to_rt_window = TRUE) {
     eic <- suppressWarnings(compute_eic(
@@ -3931,6 +4032,24 @@ server <- function(input, output, session) {
       selected = selected
     )
   })
+
+  observe({
+    references <- ms2_reference_catalog()
+    choices <- make_ms2_reference_choices(references)
+    current <- input$ms2_reference_id %||% ""
+    selected <- if (current %in% unname(choices)) current else ""
+    updateSelectInput(session, "ms2_reference_id", choices = choices, selected = selected)
+  })
+
+  observeEvent(input$eic_compound_id, {
+    matches <- ms2_reference_ids_for_compound(
+      ms2_reference_catalog(),
+      selected_eic_compound()
+    )
+    if (length(matches) == 1) {
+      updateSelectInput(session, "ms2_reference_id", selected = matches[[1]])
+    }
+  }, ignoreInit = TRUE)
 
   update_compound_rt_slider <- function(input_id, x) {
     rt_values <- x$rt[is.finite(x$rt)]
@@ -4380,6 +4499,35 @@ server <- function(input, output, session) {
     })
   })
 
+  observeEvent(input$import_ms2_reference_csv, {
+    uploaded <- input$import_ms2_reference_csv
+    if (is.null(uploaded) || is.null(uploaded$datapath) || !nzchar(uploaded$datapath)) {
+      return()
+    }
+    references <- tryCatch(read_ms2_reference_csv(uploaded$datapath), error = function(e) e)
+    if (inherits(references, "error")) {
+      showNotification(conditionMessage(references), type = "warning", duration = 10)
+      return()
+    }
+    ms2_reference_catalog(references)
+    ms2_reference_comparison(NULL)
+    matching_references <- ms2_reference_ids_for_compound(references, selected_eic_compound())
+    if (length(matching_references) == 1) {
+      updateSelectInput(session, "ms2_reference_id", selected = matching_references[[1]])
+    }
+    showNotification(
+      paste0(nrow(ms2_reference_summary(references)), " spectre(s) MS2 de reference importe(s)."),
+      type = "message",
+      duration = 8
+    )
+  })
+
+  observeEvent(input$reset_ms2_reference_library, {
+    ms2_reference_catalog(default_ms2_reference_spectra)
+    ms2_reference_comparison(NULL)
+    showNotification("References MS2 locales restaurees.", type = "message", duration = 6)
+  })
+
   observeEvent(input$compute_ms2_spectrum, {
     selected <- selected_parquet_file()
     if (nrow(selected) == 0) {
@@ -4405,6 +4553,7 @@ server <- function(input, output, session) {
     top_n <- input_number(input$ms2_top_n, 150)
     ms2_spectrum_data(NULL)
     ms2_spectrum_context(NULL)
+    ms2_reference_comparison(NULL)
 
     withProgress(message = "Lecture du spectre MS2", value = 0, {
       incProgress(0.2, detail = "Filtrage de la fenetre RT")
@@ -4433,6 +4582,55 @@ server <- function(input, output, session) {
         rt_tolerance = rt_tolerance
       ))
     })
+  })
+
+  observeEvent(input$compare_ms2_spectrum, {
+    spectrum <- ms2_spectrum_data()
+    if (is.null(spectrum) || nrow(spectrum) == 0) {
+      showNotification("Affiche d'abord un spectre MS2 avant de le comparer.", type = "warning", duration = 8)
+      return()
+    }
+    reference <- selected_ms2_reference()
+    if (nrow(reference) == 0) {
+      showNotification("Selectionne ou importe un spectre MS2 de reference.", type = "warning", duration = 8)
+      return()
+    }
+
+    file_mode <- selected_parquet_context()$mode
+    reference_mode <- reference$mode[[1]]
+    if (valid_mode(file_mode) && nzchar(reference_mode) && !identical(file_mode, reference_mode)) {
+      showNotification("Le mode du spectre de reference ne correspond pas au mode du fichier Parquet.", type = "warning", duration = 10)
+      return()
+    }
+
+    target_mz <- input_number(input$eic_target_mz, NA_real_)
+    precursor_mz <- suppressWarnings(as.numeric(reference$precursor_mz[[1]]))
+    mz_tolerance <- input_number(input$eic_mz_tolerance, 0.01)
+    if (is.finite(target_mz) && is.finite(precursor_mz) && is.finite(mz_tolerance) &&
+      abs(target_mz - precursor_mz) > mz_tolerance) {
+      showNotification(
+        "Attention : le precurseur du spectre de reference ne correspond pas au m/z EIC actuel. La comparaison reste exploratoire.",
+        type = "warning",
+        duration = 10
+      )
+    }
+
+    comparison <- tryCatch(
+      compare_ms2_spectrum_to_reference(
+        spectrum,
+        reference,
+        mz_tolerance = input_number(input$ms2_match_mz_tolerance, 0.01),
+        min_matched_fragments = input_number(input$ms2_min_matched_fragments, 3),
+        min_cosine_similarity = input_number(input$ms2_min_cosine_similarity, 0.7)
+      ),
+      error = function(e) e
+    )
+    if (inherits(comparison, "error")) {
+      showNotification(conditionMessage(comparison), type = "error", duration = 10)
+      return()
+    }
+    ms2_reference_comparison(comparison)
+    showNotification(comparison$summary$technical_status[[1]], type = "message", duration = 8)
   })
 
   observeEvent(input$run_current_file_screening, {
@@ -5392,7 +5590,7 @@ server <- function(input, output, session) {
         " +/- ", format(context$rt_tolerance, trim = TRUE), " min)"
       )
     }
-    plot_ms2_spectrum(ms2_spectrum_data(), title)
+    plot_ms2_spectrum(ms2_spectrum_data(), title, comparison = ms2_reference_comparison())
   })
 
   output$ms2_spectrum_table <- renderDT({
@@ -5408,6 +5606,70 @@ server <- function(input, output, session) {
     x <- as.data.frame(x)
     names(x) <- c("m/z", "Intensite agregee", "Intensite max", "Nombre de points")
     datatable(x, rownames = FALSE, options = list(pageLength = 12, scrollX = TRUE))
+  })
+
+  output$ms2_reference_library_status <- renderText({
+    references <- ms2_reference_summary(ms2_reference_catalog())
+    if (nrow(references) == 0) {
+      return("Aucun spectre de reference charge")
+    }
+    paste0(nrow(references), " spectre(s) de reference, ", sum(references$fragments), " fragment(s)")
+  })
+
+  output$download_ms2_reference_template <- downloadHandler(
+    filename = function() "modele_spectres_ms2.csv",
+    content = function(file) {
+      utils::write.csv2(ms2_reference_template(), file, row.names = FALSE, na = "")
+    }
+  )
+
+  output$ms2_comparison_summary_table <- renderDT({
+    comparison <- ms2_reference_comparison()
+    summary <- if (is.null(comparison)) {
+      empty_ms2_comparison_summary("Non calcule")
+    } else {
+      comparison$summary
+    }
+    x <- data.frame(
+      "Statut technique" = summary$technical_status,
+      "Reference" = summary$compound_name,
+      "Mode" = summary$mode,
+      "Fragments ref." = summary$reference_fragments,
+      "Fragments concordants" = summary$matched_fragments,
+      "Couverture (%)" = summary$fragment_coverage_pct,
+      "Couverture ponderee (%)" = summary$weighted_coverage_pct,
+      "Score cosinus" = summary$cosine_similarity,
+      "Signal observe explique (%)" = summary$observed_signal_fraction_pct,
+      "Tolerance m/z" = summary$mz_tolerance,
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+    datatable(x, rownames = FALSE, options = list(dom = "t", pageLength = 8, scrollX = TRUE))
+  })
+
+  output$ms2_comparison_table <- renderDT({
+    comparison <- ms2_reference_comparison()
+    matches <- if (is.null(comparison)) empty_ms2_reference_matches() else comparison$matches
+    x <- data.frame(
+      "m/z reference" = matches$reference_fragment_mz,
+      "Intensite relative ref. (%)" = matches$reference_relative_intensity,
+      "m/z observe" = matches$observed_fragment_mz,
+      "Intensite observee" = matches$observed_intensity,
+      "Erreur (Da)" = matches$mz_error_da,
+      "Erreur (ppm)" = matches$mz_error_ppm,
+      "Concordant" = ifelse(matches$matched, "Oui", "Non"),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+    table <- datatable(x, rownames = FALSE, options = list(pageLength = 12, scrollX = TRUE))
+    formatStyle(
+      table,
+      "Concordant",
+      target = "cell",
+      backgroundColor = styleEqual(c("Oui", "Non"), c("#1e8f4d", "#c83a32")),
+      color = styleEqual(c("Oui", "Non"), c("white", "white")),
+      fontWeight = "bold"
+    )
   })
 
   output$screening_detected_count <- renderText({
@@ -5570,10 +5832,10 @@ server <- function(input, output, session) {
         "confidence_label",
         backgroundColor = styleEqual(
           c(
-            "Niveau 0 - aucun signal",
-            "Niveau 1 - m/z",
-            "Niveau 2 - m/z + RT",
-            "Niveau 3 - m/z + RT + mobilite",
+            "Preuve 0 - aucun signal",
+            "Preuve 1 - m/z",
+            "Preuve 2 - m/z + RT",
+            "Preuve 3 - m/z + RT + mobilite",
             "Erreur"
           ),
           c("#fff1f0", "#fff8e1", "#e8f4f8", "#eef8f1", "#fff8e1")
@@ -6087,7 +6349,7 @@ server <- function(input, output, session) {
       formatStyle(
         "confidence_label",
         backgroundColor = styleEqual(
-          c("Niveau 0 - aucun signal", "Niveau 1 - m/z", "Niveau 2 - m/z + RT", "Niveau 3 - m/z + RT + mobilite", "Erreur"),
+          c("Preuve 0 - aucun signal", "Preuve 1 - m/z", "Preuve 2 - m/z + RT", "Preuve 3 - m/z + RT + mobilite", "Erreur"),
           c("#fff1f0", "#fff8e1", "#e8f4f8", "#eef8f1", "#fff8e1")
         ),
         fontWeight = "bold"

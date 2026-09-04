@@ -149,7 +149,7 @@ aggregation_fixture <- data.frame(
   compound_name = rep("terbuthylazine-d5", 7),
   status = rep("Detected", 7),
   confidence_level = rep(2L, 7),
-  confidence_label = rep("Niveau 2 - m/z + RT", 7),
+  confidence_label = rep("Preuve 2 - m/z + RT", 7),
   signal_value = c(100, 110, 1000, 200, 210, 220, 10),
   monitoring_date = as.Date(c(rep("2024-01-01", 6), NA)),
   period_label = c(rep("2024-01", 6), "Blanc de reference"),
@@ -281,10 +281,17 @@ stopifnot(identical(batch_monitoring_parameters$compound_id, "suspect_001"))
 stopifnot(identical(batch_monitoring_parameters$mode, "pos"))
 
 import_csv <- tempfile(fileext = ".csv")
+ms2_reference_csv <- tempfile(fileext = ".csv")
+on.exit(unlink(c(import_csv, ms2_reference_csv)), add = TRUE)
 writeLines(c(
   "name;mode;mz;rt;dt;ccs",
   "etalon-import;neg;123,456;4,50;2,10;150,20"
 ), import_csv)
+writeLines(c(
+  "reference_id;compound_name;mode;precursor_mz;collision_energy;fragment_mz;relative_intensity;source",
+  "terbuthylazine-d5-pos;terbuthylazine-d5;pos;235,1477;20 eV;50,001;100;Test MS2",
+  "terbuthylazine-d5-pos;terbuthylazine-d5;pos;235,1477;20 eV;75,001;50;Test MS2"
+), ms2_reference_csv)
 imported_raw <- app_environment$read_compounds_csv(import_csv)
 stopifnot(identical(names(imported_raw), c("name", "mode", "mz", "rt", "dt", "ccs")))
 imported_compounds <- app_environment$prepare_custom_compounds(
@@ -567,6 +574,31 @@ shiny::testServer(app_environment$server, {
   stopifnot(nrow(ms2_spectrum_data()) == 2)
 
   session$setInputs(
+    import_ms2_reference_csv = data.frame(
+      name = "spectres-ms2-test.csv",
+      size = file.info(ms2_reference_csv)$size,
+      type = "text/csv",
+      datapath = ms2_reference_csv,
+      stringsAsFactors = FALSE
+    )
+  )
+  session$setInputs(
+    ms2_reference_id = "terbuthylazine-d5-pos",
+    ms2_match_mz_tolerance = 0.01,
+    ms2_min_matched_fragments = 2,
+    ms2_min_cosine_similarity = 0.7,
+    compare_ms2_spectrum = 1
+  )
+  stopifnot(!is.null(ms2_reference_comparison()))
+  stopifnot(identical(ms2_reference_comparison()$summary$matched_fragments[[1]], 2L))
+  stopifnot(identical(
+    ms2_reference_comparison()$summary$technical_status[[1]],
+    "Compatible selon seuils exploratoires"
+  ))
+  stopifnot(!is.null(output$ms2_comparison_summary_table))
+  stopifnot(!is.null(output$ms2_comparison_table))
+
+  session$setInputs(
     control_file_id = "test/pharma_PT6_replicate_1.parquet",
     run_control_file_checks = 1
   )
@@ -716,7 +748,7 @@ shiny::testServer(app_environment$server, {
     mode = c("pos", "pos", "pos", "neg", "pos", "pos", "pos"),
     status = c("Detected", "Detected", "Detected", "Not Detected", "Detected", "Not Detected", "Detected"),
     confidence_level = c(2L, 2L, 2L, 1L, 2L, 0L, 2L),
-    confidence_label = c("Niveau 2 - m/z + RT", "Niveau 2 - m/z + RT", "Niveau 2 - m/z + RT", "Niveau 1 - m/z", "Niveau 2 - m/z + RT", "Niveau 0 - aucun signal", "Niveau 2 - m/z + RT"),
+    confidence_label = c("Preuve 2 - m/z + RT", "Preuve 2 - m/z + RT", "Preuve 2 - m/z + RT", "Preuve 1 - m/z", "Preuve 2 - m/z + RT", "Preuve 0 - aucun signal", "Preuve 2 - m/z + RT"),
     expected_rt = c(11.7, 11.7, 11.7, 15.96, 10.152, 10.152, 10.152),
     rt_area_sum = c(1000, 100, 1200, 300, 500, 20, 550),
     rt_max_intensity = c(500, 50, 600, 150, 250, 10, 275),
