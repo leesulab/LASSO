@@ -13,7 +13,8 @@ les dependances R verrouillees :
 git clone git@github.com:leesulab/LASSO.git
 cd LASSO
 git switch observatoire-hrms-prototype
-Rscript -e 'install.packages("renv"); renv::restore()'
+Rscript --vanilla -e 'install.packages("renv", repos = "https://cloud.r-project.org")'
+Rscript -e 'renv::restore(prompt = FALSE)'
 ```
 
 Les fichiers analytiques ne font pas partie du depot. Avant le premier lancement,
@@ -70,9 +71,17 @@ tests/        tests automatises
 docs/         documentation d'utilisation et de developpement
 docker/       futur deploiement Docker
 renv.lock     versions des packages R
+.Rprofile     activation automatique de renv
+renv/         amorcage et reglages renv versionnes
 .env.example  exemple de configuration sans secret
 scripts/run_local.sh lancement local a partir de .env
 ```
+
+Le dossier `renv/library/` contient les packages installes sur une machine : il
+reste volontairement ignore par Git. En revanche, `.Rprofile`,
+`renv/activate.R`, `renv/settings.json`, `renv/.gitignore` et `renv.lock` sont
+versionnes. Ils permettent a `renv::restore()` de reconstruire cet environnement
+apres un clone, sans partager les packages deja telecharges.
 
 `Doc/` contient les notes personnelles, comptes rendus et documents de travail du stage. Il reste local et est ignore par Git, comme les fichiers Parquet, JSON, CSV de donnees, exports, identifiants Nextcloud et clones externes.
 

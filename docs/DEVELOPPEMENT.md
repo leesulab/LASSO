@@ -32,10 +32,14 @@ Doc/                            notes personnelles ignorees par Git
 
 ## Installation de developpement
 
-```r
-install.packages("renv")
-renv::restore()
+```bash
+Rscript --vanilla -e 'install.packages("renv", repos = "https://cloud.r-project.org")'
+Rscript -e 'renv::restore(prompt = FALSE)'
 ```
+
+Les fichiers d'amorcage `.Rprofile`, `renv/activate.R`,
+`renv/settings.json` et `renv/.gitignore` font partie du depot, au meme titre
+que `renv.lock`. La bibliotheque `renv/library/` ne doit jamais etre versionnee.
 
 Lancer les tests depuis la racine :
 
@@ -116,7 +120,7 @@ Utiliser un depot **prive** tant que la liste des molecules, les parametres anal
 Avant chaque premier envoi, ajouter les fichiers de maniere explicite :
 
 ```bash
-git add README.md .gitignore .env.example renv.lock
+git add README.md .gitignore .env.example .Rprofile renv.lock renv
 git add app scripts tests docs docker data/README.md data/processed/README.md data/reference/README.md
 git status --short
 ```

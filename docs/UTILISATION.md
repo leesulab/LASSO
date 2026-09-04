@@ -13,10 +13,15 @@ Les donnees analytiques ne sont pas distribuees avec le code. Elles doivent etre
 
 Depuis la racine du projet :
 
-```r
-install.packages("renv")
-renv::restore()
+```bash
+Rscript --vanilla -e 'install.packages("renv", repos = "https://cloud.r-project.org")'
+Rscript -e 'renv::restore(prompt = FALSE)'
 ```
+
+Le depot contient le squelette `renv` necessaire a l'activation
+(`.Rprofile`, `renv/activate.R` et `renv/settings.json`) ainsi que le fichier
+`renv.lock`. Ne pas ajouter `renv/library/` a Git : ce dossier est propre a la
+machine et sera reconstruit par la restauration.
 
 ## Preparer les metadonnees locales
 
