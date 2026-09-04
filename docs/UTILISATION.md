@@ -48,7 +48,8 @@ Avec un dossier Parquet externe, par exemple une cle USB montee localement :
 
 ```bash
 cp .env.example .env
-# Editer .env puis renseigner DATA_PATH.
+# Editer .env puis renseigner DATA_PATH. Le fichier .env n'est jamais clone ni
+# versionne : cette etape est obligatoire sur chaque nouvelle machine.
 bash scripts/run_local.sh
 ```
 

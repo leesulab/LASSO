@@ -22,7 +22,7 @@ obtenir les donnees par le canal autorise puis preparer localement
 
 ```bash
 cp .env.example .env
-# Editer .env et renseigner DATA_PATH avec le dossier local des JSON et Parquet.
+# Editer .env : renseigner seulement DATA_PATH avec le dossier des JSON et Parquet.
 Rscript scripts/build_metadata_index.R /chemin/vers/observatoire data/processed/metadata_index.csv
 Rscript scripts/build_compounds_reference.R /chemin/vers/etalons-internes.csv data/processed/compounds_reference.csv
 bash scripts/run_local.sh
