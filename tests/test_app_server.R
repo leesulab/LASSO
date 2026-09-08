@@ -83,6 +83,38 @@ Sys.setenv(
 app_environment <- new.env(parent = globalenv())
 source(file.path(project_root, "app", "app.R"), local = app_environment)
 
+legacy_filename_metadata <- app_environment$metadata_from_parquet_filename(c(
+  "2021/neg/Obs_01_Clichy C_19012021_replicate_1.parquet",
+  "2023/neg/2024-01C_replicate_1.parquet"
+))
+stopifnot(identical(legacy_filename_metadata$reference_year, c("2021", "2023")))
+stopifnot(identical(legacy_filename_metadata$reference_month, c("01", "01")))
+stopifnot(identical(legacy_filename_metadata$duplicate_label, c("C", "C")))
+
+legacy_index <- data.frame(
+  json_relative_path = "2021/pos/Obs_01_Clichy C_19012021_replicate_1-metadata(1).json",
+  parquet_relative_path = "2021/pos/Obs_01_Clichy C_19012021_replicate_1-metadata(1).json.parquet",
+  year_dir = "2021",
+  mode_dir = "pos",
+  reference_year = "2024",
+  reference_month = "",
+  duplicate_label = "",
+  replicate_label = "",
+  sample_name = "",
+  sample_base_name = "",
+  sample_group = "",
+  is_blank = FALSE,
+  stringsAsFactors = FALSE
+)
+normalized_legacy_index <- app_environment$normalize_metadata_index_records(legacy_index)
+stopifnot(identical(
+  normalized_legacy_index$parquet_relative_path[[1]],
+  "2021/pos/Obs_01_Clichy C_19012021_replicate_1(1).parquet"
+))
+stopifnot(identical(normalized_legacy_index$reference_year[[1]], "2021"))
+stopifnot(identical(normalized_legacy_index$reference_month[[1]], "01"))
+stopifnot(identical(normalized_legacy_index$duplicate_label[[1]], "C"))
+
 test_extrema <- app_environment$local_extrema_indices(c(0, 4, 1, 3, 0), max_each = 10)
 stopifnot(identical(test_extrema$maxima, c(2L, 4L)))
 stopifnot(identical(test_extrema$minima, c(3L)))
@@ -384,7 +416,7 @@ wrong_year_metadata$mode_dir <- "pos"
 wrong_year_metadata$reference_year <- "2021"
 wrong_year <- app_environment$enrich_parquet_files(wrong_year_files, wrong_year_metadata)
 stopifnot(!isTRUE(wrong_year$metadata_match[[1]]))
-stopifnot(is.na(wrong_year$reference_year[[1]]))
+stopifnot(identical(wrong_year$reference_year[[1]], "2024"))
 stopifnot(identical(wrong_year$parquet_mode[[1]], "pos"))
 blank_choices <- app_environment$make_nextcloud_file_choices(data.frame(
   path = c(
@@ -409,7 +441,7 @@ filename_only_files$parquet_id <- "observatoire-db/2023/pos/2024-02D_replicate_1
 filename_only_files$relative_path <- filename_only_files$parquet_id
 filename_only <- app_environment$enrich_parquet_files(filename_only_files, synthetic_metadata)
 stopifnot(!isTRUE(filename_only$metadata_match[[1]]))
-stopifnot(identical(filename_only$reference_year[[1]], "2024"))
+stopifnot(identical(filename_only$reference_year[[1]], "2023"))
 stopifnot(identical(filename_only$reference_month[[1]], "02"))
 stopifnot(identical(filename_only$duplicate_label[[1]], "D"))
 stopifnot(identical(filename_only$replicate_label[[1]], "1_3"))

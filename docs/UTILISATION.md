@@ -41,6 +41,14 @@ Rscript scripts/build_compounds_reference.R \
 
 Ces fichiers restent locaux et ne doivent pas etre envoyes sur GitHub sans validation explicite.
 
+Le script d'indexation doit recevoir la racine qui contient les dossiers annuels
+(`2021/pos`, `2021/neg`, etc.). Il indexe chaque fichier Parquet, y compris
+ceux dont le JSON manque. Pour ces derniers, l'annee et le mode proviennent du
+chemin et le mois ou le duplicat sont deduits du nom lorsque cela est possible.
+Le dossier d'annee est prioritaire sur une annee contradictoire dans le nom du
+fichier. Regenerer l'index avant de relancer l'application apres une mise a jour
+du script ou des donnees.
+
 ## Lancer l'application
 
 Avec le dossier de donnees par defaut :

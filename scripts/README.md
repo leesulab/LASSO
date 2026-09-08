@@ -12,7 +12,8 @@ Ce dossier est prevu pour les scripts reutilisables :
 
 ### `build_metadata_index.R`
 
-Construit un index CSV a partir des fichiers JSON de metadonnees :
+Construit un index CSV avec une ligne par Parquet, enrichie par les fichiers
+JSON de metadonnees lorsqu'ils existent :
 
 ```bash
 Rscript scripts/build_metadata_index.R
@@ -29,6 +30,17 @@ Sortie par defaut :
 ```text
 data/processed/metadata_index.csv
 ```
+
+Le dossier `annee/mode` est prioritaire sur le nom du fichier pour l'annee et
+le mode. Les formats historiques contenant une date `JJMMAAAA` sont reconnus.
+Un Parquet sans JSON est conserve avec `json_available = FALSE`.
+
+### `observatory_metadata.R`
+
+Contient les regles partagees par le script d'indexation et Shiny pour extraire
+l'annee, le mois, le mode, le duplicat et l'injection depuis le chemin et le
+nom d'un fichier. Il gere notamment les noms historiques au format `JJMMAAAA`
+et les suffixes de copie tels que `-metadata(1).json`.
 
 ### `build_compounds_reference.R`
 

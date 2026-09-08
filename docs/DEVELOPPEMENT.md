@@ -19,6 +19,7 @@ screening et des futurs niveaux d'identification publies.
 ```text
 app/app.R                       interface et logique Shiny
 scripts/parquet_chromatograms.R calculs TIC, BPI, EIC et screening
+scripts/observatory_metadata.R regles de lecture des chemins et noms de fichiers
 scripts/ms2_reference_spectra.R import et comparaison exploratoire MS2
 scripts/nextcloud_public_webdav.R acces Nextcloud/WebDAV
 scripts/build_metadata_index.R  index JSON vers Parquet
@@ -45,6 +46,7 @@ Lancer les tests depuis la racine :
 
 ```bash
 Rscript tests/test_chromatograms.R
+Rscript tests/test_metadata_index.R
 Rscript tests/test_ms2_reference_spectra.R
 Rscript tests/test_app_server.R
 Rscript tests/test_nextcloud_webdav.R
@@ -80,6 +82,9 @@ Les JSON associes sont indexes par leur chemin relatif. Un JSON situe dans `2024
 - ne jamais ajouter de Parquet, JSON, resultats CSV, jeton ou mot de passe au depot ;
 - executer les trois tests avant de proposer une modification ;
 - conserver le traitement par fichier et les filtres Arrow/DuckDB afin de ne pas charger les Parquet entiers en memoire ;
+- conserver un index par Parquet, y compris lorsqu'un JSON est absent ; le
+  chemin `annee/mode` est prioritaire sur une nomenclature de fichier
+  contradictoire ;
 - garder les valeurs brutes, le signal corrige du blanc et les valeurs normalisees dans les exports ;
 - ne pas promouvoir une verification de mobilite au niveau de confiance 3 sans validation analytique ;
 - ne pas transformer un score MS2 en identification publiee sans bibliotheque,

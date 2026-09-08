@@ -16,25 +16,9 @@ if (!dir.exists(data_path)) {
 test_file <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[[1]])
 repository_root <- normalizePath(file.path(dirname(test_file), ".."), mustWork = TRUE)
 parquet_files <- sort(list.files(data_path, pattern = "\\.parquet$", recursive = TRUE, full.names = TRUE))
-json_files <- sort(list.files(data_path, pattern = "-metadata\\.json$", recursive = TRUE, full.names = TRUE))
 
 if (length(parquet_files) == 0) {
   stop("No Parquet file found under DATA_PATH: ", data_path)
-}
-if (length(json_files) == 0) {
-  stop("No JSON metadata file found under DATA_PATH: ", data_path)
-}
-
-expected_json <- sub("\\.parquet$", "-metadata.json", parquet_files)
-expected_parquet <- sub("-metadata\\.json$", ".parquet", json_files)
-missing_json <- expected_json[!file.exists(expected_json)]
-missing_parquet <- expected_parquet[!file.exists(expected_parquet)]
-if (length(missing_json) > 0 || length(missing_parquet) > 0) {
-  details <- c(
-    if (length(missing_json) > 0) paste0("JSON missing: ", basename(missing_json)),
-    if (length(missing_parquet) > 0) paste0("Parquet missing: ", basename(missing_parquet))
-  )
-  stop(paste(details, collapse = "\n"))
 }
 
 # Build the index exactly as it will be built on the target machine, but keep
@@ -43,7 +27,7 @@ temporary_index <- tempfile("metadata-index-", fileext = ".csv")
 on.exit(unlink(temporary_index, force = TRUE), add = TRUE)
 build_output <- system2(
   "Rscript",
-  c(file.path(repository_root, "scripts", "build_metadata_index.R"), data_path, temporary_index),
+  c("--vanilla", file.path(repository_root, "scripts", "build_metadata_index.R"), data_path, temporary_index),
   stdout = TRUE,
   stderr = TRUE
 )
@@ -55,10 +39,22 @@ if (!identical(build_status, 0L)) {
   stop("Metadata index build failed:\n", paste(build_output, collapse = "\n"))
 }
 metadata_index <- utils::read.csv(temporary_index, stringsAsFactors = FALSE, check.names = FALSE)
-if (nrow(metadata_index) != length(json_files)) {
-  stop("Metadata index row count does not match the number of JSON files.")
+relative_parquet_paths <- sub(
+  paste0("^", normalizePath(data_path, mustWork = TRUE), .Platform$file.sep),
+  "",
+  normalizePath(parquet_files, mustWork = TRUE)
+)
+if (nrow(metadata_index) != length(parquet_files)) {
+  stop("Metadata index does not contain every Parquet file.")
 }
-cat("Metadata index: OK (", nrow(metadata_index), " rows)\n", sep = "")
+if (anyDuplicated(metadata_index$parquet_relative_path) ||
+    !setequal(metadata_index$parquet_relative_path, relative_parquet_paths)) {
+  stop("Metadata index paths do not match the available Parquet files.")
+}
+if (!"json_available" %in% names(metadata_index)) {
+  stop("Metadata index must report whether JSON metadata is available.")
+}
+cat("Metadata index: OK (", nrow(metadata_index), " Parquet files)\n", sep = "")
 
 # app.R resolves its scripts and CSV files from PROJECT_ROOT. Use a disposable
 # project copy so this test never overwrites the user's working configuration.
@@ -99,9 +95,6 @@ catalog <- app_environment$enrich_parquet_files(
 )
 if (nrow(catalog) != length(parquet_files)) {
   stop("The application catalogue does not contain every local Parquet file.")
-}
-if (!all(catalog$metadata_match)) {
-  stop("At least one Parquet file was not associated with its JSON metadata.")
 }
 if (any(!catalog$parquet_mode %in% c("pos", "neg"))) {
   stop("At least one file has an unknown ionisation mode.")
@@ -162,7 +155,7 @@ if (any(screening$status == "Error")) {
 
 detected <- sum(screening$status == "Detected", na.rm = TRUE)
 cat("test_local_dataset_integration: OK\n")
-cat("Parquet/JSON pairs:", length(parquet_files), "\n")
+cat("Parquet files:", length(parquet_files), "\n")
 cat("Validated TIC/BPI files:", sum(chromatogram_ok), "\n")
 cat("Screening rows:", nrow(screening), "\n")
 cat("Detected rows:", detected, "\n")

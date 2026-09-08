@@ -17,7 +17,7 @@ restent locaux et ne doivent jamais etre ajoutes au depot sans accord explicite.
 ## Architecture
 
 ```text
-DATA_PATH + JSON locaux
+DATA_PATH + JSON/Parquet locaux
         |
 build_metadata_index.R -> data/processed/metadata_index.csv
 liste etalons/suspects
@@ -33,9 +33,10 @@ Les responsabilites principales sont les suivantes :
 | --- | --- |
 | `app/app.R` | Interface Shiny, etat de session, selection des fichiers, affichage et exports. |
 | `scripts/parquet_chromatograms.R` | Requetes Arrow/DuckDB, TIC, BPI, EIC, screening et niveaux de confiance. |
+| `scripts/observatory_metadata.R` | Regles partagees pour les chemins et les nomenclatures historiques. |
 | `scripts/ms2_reference_spectra.R` | Import CSV et comparaison exploratoire des fragments MS2. |
 | `scripts/nextcloud_public_webdav.R` | Navigation et lecture distante Nextcloud/WebDAV. |
-| `scripts/build_metadata_index.R` | Transformation JSON vers index local des fichiers. |
+| `scripts/build_metadata_index.R` | Index local de chaque Parquet, enrichi par le JSON lorsqu'il existe. |
 | `scripts/build_compounds_reference.R` | Normalisation de la liste d'etalons ou de suspects. |
 | `scripts/ccs_drift_time.R` | Contrat et adaptation future de la conversion CCS vers DT. |
 | `tests/` | Jeux synthetiques et non sensibles pour verifier le comportement. |
@@ -67,6 +68,7 @@ decision explicite de l'equipe.
 
 ```bash
 Rscript tests/test_chromatograms.R
+Rscript tests/test_metadata_index.R
 Rscript tests/test_ms2_reference_spectra.R
 Rscript tests/test_app_server.R
 Rscript tests/test_nextcloud_webdav.R
@@ -90,6 +92,8 @@ car il depend de donnees analytiques absentes du depot.
   filtres m/z et niveau MS doivent rester executes par Arrow ou DuckDB.
 - Ne jamais faire correspondre un JSON a un Parquet sur le seul nom de fichier :
   les blancs pos et neg peuvent avoir le meme nom. Le chemin relatif est la cle.
+- Un Parquet sans JSON doit rester indexe avec `json_available = FALSE`. Le
+  dossier `annee/mode` reste la source prioritaire pour l'annee et le mode.
 - Les resultats exportes doivent conserver les valeurs brutes, corrigees du
   blanc et normalisees, ainsi que les parametres de calcul.
 

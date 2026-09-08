@@ -39,10 +39,17 @@ project_root <- find_project_root()
 
 metadata_file <- file.path(project_root, "data", "processed", "metadata_index.csv")
 compounds_file <- file.path(project_root, "data", "processed", "compounds_reference.csv")
+observatory_metadata_script <- file.path(project_root, "scripts", "observatory_metadata.R")
 ccs_drift_time_script <- file.path(project_root, "scripts", "ccs_drift_time.R")
 chromatograms_script <- file.path(project_root, "scripts", "parquet_chromatograms.R")
 ms2_reference_script <- file.path(project_root, "scripts", "ms2_reference_spectra.R")
 nextcloud_script <- file.path(project_root, "scripts", "nextcloud_public_webdav.R")
+
+if (file.exists(observatory_metadata_script)) {
+  source(observatory_metadata_script)
+} else {
+  stop("Missing script: ", observatory_metadata_script)
+}
 
 if (file.exists(ccs_drift_time_script)) {
   source(ccs_drift_time_script)
@@ -261,72 +268,15 @@ parse_optional_logical <- function(x) {
 }
 
 mode_from_parquet_path <- function(relative_path) {
-  path_parts <- strsplit(tolower(normalize_relative_path(relative_path)), "/", fixed = TRUE)[[1]]
-  matches <- unique(path_parts[path_parts %in% c("pos", "neg")])
-  if (length(matches) == 1) matches[[1]] else NA_character_
-}
-
-filename_stem <- function(paths) {
-  paths <- normalize_relative_path(paths)
-  paths[is.na(paths)] <- ""
-  sub("\\.parquet$", "", basename(paths), ignore.case = TRUE)
-}
-
-filename_capture <- function(values, pattern, group = 1L) {
-  values <- as.character(values)
-  values[is.na(values)] <- ""
-  matches <- regmatches(values, regexec(pattern, values, perl = TRUE, ignore.case = TRUE))
-  capture_index <- as.integer(group) + 1L
-  vapply(matches, function(parts) {
-    if (length(parts) >= capture_index && nzchar(parts[[capture_index]])) {
-      parts[[capture_index]]
-    } else {
-      NA_character_
-    }
-  }, character(1))
+  observatory_mode_from_path(relative_path)[[1]]
 }
 
 metadata_from_parquet_filename <- function(relative_paths) {
-  stem <- filename_stem(relative_paths)
-  reference_year <- filename_capture(
-    stem,
-    "(?:^|[^0-9])(20[0-9]{2})[-_](0[1-9]|1[0-2])",
-    group = 1
-  )
-  reference_month <- filename_capture(
-    stem,
-    "(?:^|[^0-9])(20[0-9]{2})[-_](0[1-9]|1[0-2])",
-    group = 2
-  )
-  compact_duplicate <- filename_capture(
-    stem,
-    "20[0-9]{2}[-_](?:0[1-9]|1[0-2])([A-Za-z])(?=[_-]|$)"
-  )
-  named_duplicate <- filename_capture(stem, "-clichy-([A-Za-z0-9]+)(?:_replicate|$)")
-  duplicate_label <- ifelse(!is.na(compact_duplicate), compact_duplicate, named_duplicate)
-  is_blank <- grepl(
-    "(^|[^[:alpha:]])(blanc|blank)([^[:alpha:]]|$)",
-    stem,
-    ignore.case = TRUE,
-    perl = TRUE
-  )
-  sample_base_name <- ifelse(nzchar(stem), sub("_replicate_[^/]+$", "", stem, ignore.case = TRUE), NA_character_)
-
-  data.frame(
-    reference_year = reference_year,
-    reference_month = reference_month,
-    file_type = ifelse(
-      is_blank,
-      "Blanc",
-      ifelse(!is.na(reference_year), "Echantillon", NA_character_)
-    ),
-    duplicate_label = duplicate_label,
-    replicate_label = filename_capture(stem, "_replicate_(.+)$"),
-    sample_name = ifelse(nzchar(stem), stem, NA_character_),
-    sample_base_name = sample_base_name,
-    sample_group = sample_base_name,
-    stringsAsFactors = FALSE
-  )
+  parsed <- observatory_parse_parquet_metadata(relative_paths)
+  parsed[, c(
+    "reference_year", "reference_month", "file_type", "duplicate_label",
+    "replicate_label", "sample_name", "sample_base_name", "sample_group"
+  ), drop = FALSE]
 }
 
 fill_missing_metadata <- function(values, fallback) {
@@ -335,6 +285,71 @@ fill_missing_metadata <- function(values, fallback) {
   missing <- is.na(values) | values == ""
   values[missing] <- fallback[missing]
   values
+}
+
+normalize_metadata_index_records <- function(metadata) {
+  if (nrow(metadata) == 0) {
+    return(metadata)
+  }
+  if (!"parquet_relative_path" %in% names(metadata)) {
+    stop("metadata_index.csv must contain the column 'parquet_relative_path'.")
+  }
+  existing_column <- function(name, default = NA_character_) {
+    if (name %in% names(metadata)) {
+      as.character(metadata[[name]])
+    } else {
+      rep(default, nrow(metadata))
+    }
+  }
+
+  json_relative_path <- existing_column("json_relative_path")
+  expected_parquet_path <- observatory_json_to_parquet_relative_path(json_relative_path)
+  current_parquet_path <- observatory_normalize_path(metadata$parquet_relative_path)
+  malformed_json_path <- grepl(
+    "-metadata(?:\\([0-9]+\\))?\\.json\\.parquet$",
+    current_parquet_path,
+    ignore.case = TRUE,
+    perl = TRUE
+  )
+  replace_path <- !is.na(expected_parquet_path) & nzchar(expected_parquet_path) & (
+    !nzchar(current_parquet_path) | malformed_json_path
+  )
+  metadata$parquet_relative_path[replace_path] <- expected_parquet_path[replace_path]
+
+  parsed <- observatory_parse_parquet_metadata(metadata$parquet_relative_path)
+  metadata$year_dir <- observatory_first_nonempty(parsed$year_dir, existing_column("year_dir"))
+  metadata$mode_dir <- observatory_first_nonempty(parsed$mode_dir, existing_column("mode_dir"))
+  metadata$reference_year <- observatory_first_nonempty(
+    parsed$year_dir,
+    observatory_first_nonempty(existing_column("reference_year"), parsed$reference_year)
+  )
+  metadata$reference_month <- observatory_first_nonempty(
+    existing_column("reference_month"),
+    parsed$reference_month
+  )
+  metadata$duplicate_label <- observatory_first_nonempty(
+    existing_column("duplicate_label"),
+    parsed$duplicate_label
+  )
+  metadata$replicate_label <- observatory_first_nonempty(
+    existing_column("replicate_label"),
+    parsed$replicate_label
+  )
+  metadata$sample_name <- observatory_first_nonempty(existing_column("sample_name"), parsed$sample_name)
+  metadata$sample_base_name <- observatory_first_nonempty(
+    existing_column("sample_base_name"),
+    parsed$sample_base_name
+  )
+  metadata$sample_group <- observatory_first_nonempty(existing_column("sample_group"), parsed$sample_group)
+
+  indexed_blank <- parse_optional_logical(existing_column("is_blank"))
+  indexed_blank[is.na(indexed_blank)] <- FALSE
+  metadata$is_blank <- indexed_blank | parsed$is_blank
+
+  json_available <- parse_optional_logical(existing_column("json_available"))
+  json_available[is.na(json_available)] <- TRUE
+  metadata$json_available <- json_available
+  metadata
 }
 
 enrich_parquet_files <- function(files, metadata) {
@@ -362,7 +377,8 @@ enrich_parquet_files <- function(files, metadata) {
   lookup_columns <- c(
     "parquet_relative_path", "mode_dir", "reference_year", "reference_month",
     "file_type", "duplicate_label", "replicate_label", "sample_name", "sample_base_name", "sample_group",
-    "sample_result_id", "has_ccs_calibration", "ccs_calibration_c1", "ccs_calibration_c2"
+    "sample_result_id", "has_ccs_calibration", "ccs_calibration_c1", "ccs_calibration_c2",
+    "json_available"
   )
   if (!"parquet_relative_path" %in% names(metadata)) {
     stop("metadata_index.csv must contain the column 'parquet_relative_path'.")
@@ -393,14 +409,18 @@ enrich_parquet_files <- function(files, metadata) {
     parse_optional_logical(value_from_lookup(column))
   }
 
-  files$metadata_match <- matched
+  json_available <- logical_from_lookup("json_available")
+  json_available[is.na(json_available)] <- TRUE
+  files$metadata_match <- matched & json_available
   files$metadata_mode <- tolower(value_from_lookup("mode_dir"))
   metadata_mode_valid <- vapply(files$metadata_mode, valid_mode, logical(1))
   path_mode_valid <- vapply(files$path_mode, valid_mode, logical(1))
   # The storage path is authoritative when it contradicts an associated JSON.
   # This keeps a blank in a `neg` folder negative even when its filename is
   # ambiguous or its basename was matched to another metadata entry.
-  path_preferred <- path_mode_valid & (!metadata_mode_valid | files$path_mode != files$metadata_mode)
+  path_preferred <- path_mode_valid & (
+    !metadata_mode_valid | !files$metadata_match | files$path_mode != files$metadata_mode
+  )
   files$parquet_mode <- ifelse(
     path_preferred,
     files$path_mode,
@@ -2246,7 +2266,7 @@ compound_identity_key <- function(x) {
   )
 }
 
-metadata_index <- read_app_csv(metadata_file)
+metadata_index <- normalize_metadata_index_records(read_app_csv(metadata_file))
 compounds_reference <- read_app_csv(compounds_file)
 ms2_reference_file <- file.path(project_root, "data", "processed", "ms2_reference_spectra.csv")
 default_ms2_reference_spectra <- load_optional_ms2_reference_spectra(ms2_reference_file)

@@ -29,6 +29,11 @@ Rscript scripts/build_compounds_reference.R /chemin/vers/etalons-internes.csv da
 bash scripts/run_local.sh
 ```
 
+Regenerer `metadata_index.csv` apres toute mise a jour du code ou apres l'ajout
+de nouvelles donnees. Le script indexe chaque Parquet du dossier : un fichier
+sans JSON associe reste visible dans l'application avec les informations
+deduites de son chemin et de son nom.
+
 Ouvrir ensuite `http://127.0.0.1:7660`.
 
 `DATA_PATH` peut pointer vers un disque monte localement, par exemple
