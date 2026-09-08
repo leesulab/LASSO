@@ -14,7 +14,10 @@ script_path <- sub("^--file=", "", script_argument[[1]])
 source(file.path(dirname(normalizePath(script_path, mustWork = TRUE)), "observatory_metadata.R"))
 
 if (!requireNamespace("jsonlite", quietly = TRUE)) {
-  stop("Package 'jsonlite' is required. Install it with install.packages('jsonlite').")
+  stop(
+    "Package 'jsonlite' is required. From the project root, run: ",
+    "Rscript -e 'renv::restore(prompt = FALSE)'"
+  )
 }
 
 normalize_missing <- function(x) {
