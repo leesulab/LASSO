@@ -49,26 +49,6 @@ JSON et Parquet. Les fichiers Parquet et les donnees de reference ne sont pas
 inclus dans le depot. En cas d'erreur `DATA_PATH does not exist`, consulter la
 section [Configurer le dossier de donnees](docs/UTILISATION.md#configurer-le-dossier-de-donnees-data_path) : le depot de code et le dossier de donnees sont distincts.
 
-### Depannage local de `renv`
-
-Le chemin normal est toujours `renv::restore()`. Si cette restauration echoue
-uniquement a cause d'un package natif lourd, alors qu'une installation R globale
-connue comme compatible est deja disponible sur la machine, un developpeur peut
-tester localement sans activer `renv` :
-
-```bash
-RENV_CONFIG_AUTOLOADER_ENABLED=FALSE Rscript scripts/build_metadata_index.R \
-  /chemin/vers/observatoire-db data/processed/metadata_index.csv
-RENV_CONFIG_AUTOLOADER_ENABLED=FALSE Rscript scripts/build_compounds_reference.R \
-  /chemin/vers/etalons-internes.csv data/processed/compounds_reference.csv
-RENV_CONFIG_AUTOLOADER_ENABLED=FALSE bash scripts/run_local.sh
-```
-
-Ce contournement est reserve au test local : il depend des versions de packages
-installees sur la machine et ne doit etre utilise ni pour Docker, ni pour la
-validation finale, ni en production. Liberer de l'espace disque puis restaurer
-`renv` reste la solution reproductible.
-
 ## Utiliser l'application
 
 1. Ouvrir `Catalogue` pour filtrer les fichiers par annee, mode et type.

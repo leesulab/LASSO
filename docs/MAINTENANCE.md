@@ -16,10 +16,8 @@ restent locaux et ne doivent jamais etre ajoutes au depot sans accord explicite.
 
 `renv::restore()` doit etre execute dans le clone effectivement utilise : sa
 bibliotheque est propre a chaque clone, meme si le cache de telechargement est
-partage sur la machine. Une execution avec
-`RENV_CONFIG_AUTOLOADER_ENABLED=FALSE` peut depanner un test local lorsque les
-packages globaux ont ete verifies, mais ne convient pas a Docker ni a la
-production. Ces environnements doivent restaurer les versions de `renv.lock`.
+partage sur la machine. Docker et la production doivent restaurer les versions
+de `renv.lock`.
 
 ## Architecture
 
