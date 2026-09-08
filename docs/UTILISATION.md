@@ -23,6 +23,30 @@ Le depot contient le squelette `renv` necessaire a l'activation
 `renv.lock`. Ne pas ajouter `renv/library/` a Git : ce dossier est propre a la
 machine et sera reconstruit par la restauration.
 
+La restauration doit etre lancee dans le clone utilise pour demarrer
+l'application : deux clones differents ont deux bibliotheques `renv/library/`
+distinctes. Sur Linux, des packages natifs comme `arrow` et `duckdb` peuvent
+etre longs a installer et necessiter de l'espace disque. Si les versions sont
+deja presentes dans le cache `renv` de la machine, elles sont simplement
+reutilisees.
+
+### Depannage temporaire sans `renv`
+
+Si `renv::restore()` echoue uniquement lors de la compilation d'un package lourd
+et qu'une installation R globale compatible a deja ete verifiee, il est possible
+de tester le prototype localement avec :
+
+```bash
+RENV_CONFIG_AUTOLOADER_ENABLED=FALSE Rscript scripts/build_metadata_index.R \
+  /chemin/vers/observatoire-db data/processed/metadata_index.csv
+RENV_CONFIG_AUTOLOADER_ENABLED=FALSE Rscript scripts/build_compounds_reference.R \
+  /chemin/vers/etalons-internes.csv data/processed/compounds_reference.csv
+RENV_CONFIG_AUTOLOADER_ENABLED=FALSE bash scripts/run_local.sh
+```
+
+Ce mode ne doit pas etre utilise pour Docker, les tests de validation ou la
+production : il ne garantit pas les versions inscrites dans `renv.lock`.
+
 ## Preparer les metadonnees locales
 
 Lorsque les fichiers JSON et Parquet suivent une structure telle que `2024/pos/...` ou `2024/neg/...`, construire l'index local :
@@ -35,7 +59,7 @@ Pour construire la liste d'etalons a partir d'un fichier fourni par l'equipe :
 
 ```bash
 Rscript scripts/build_compounds_reference.R \
-  data/reference/etalons-internes.csv \
+  /chemin/vers/etalons-internes.csv \
   data/processed/compounds_reference.csv
 ```
 
