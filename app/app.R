@@ -3238,7 +3238,7 @@ ui <- page_navbar(
             tags$dt("Developpement"),
             tags$dd("Selyan Boudahmane - eleve ingenieur ENSIMAG"),
             tags$dt("Encadrement"),
-            tags$dd("Julien Le Roux - LEESU"),
+            tags$dd("Julien Le Roux - Maitre de conferences, UPEC / LEESU"),
             tags$dt("Donnees"),
             tags$dd("Observatoire de la Ville du SIAAP")
           )
