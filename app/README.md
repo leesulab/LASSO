@@ -31,8 +31,13 @@ Il affiche :
 - un screening de lot reel, avec resultats enrichis des metadonnees du fichier, export CSV et reimport d'un export precedent ;
 - un onglet `Suivi molecules` pour comparer les valeurs brutes, corrigees ou normalisees d'un etalon interne ou d'un suspect entre les fichiers d'un lot, puis agreger les injections et duplicats ;
 - un onglet `Controle` avec des controles globaux, un diagnostic des metadonnees de chaque Parquet et une analyse a la demande du schema d'un fichier.
+- un onglet `A propos` avec les credits du projet, le lien du laboratoire et son logo officiel.
 
 Les principaux tableaux et graphiques sont dans des panneaux agrandissables, pour garder un affichage compact puis passer en grand format quand il faut inspecter les donnees.
+
+## Attribution
+
+L'onglet `A propos` identifie le developpeur, l'encadrant, le LEESU et la source des donnees. Le logo est stocke dans `app/www/images/leesu-logo.svg` et provient du [site public du LEESU](https://www.leesu.fr/). Son origine exacte est documentee dans `app/www/images/README.md`.
 
 L'onglet `Parquet` permet d'inspecter et de screener un fichier courant. L'onglet `Plan screening` permet de selectionner plusieurs fichiers locaux et Nextcloud, de verifier les requetes `fichier x molecule`, puis de lancer le screening de tout le lot. Les fichiers sont traites sequentiellement pour limiter la memoire utilisee et pour conserver une erreur eventuelle sur un fichier sans bloquer les suivants. Les resultats sont exportables en CSV et conservent notamment le fichier, son origine, le mode, la date, le duplicat et le numero d'echantillon lorsque ces metadonnees sont disponibles.
 

@@ -2407,6 +2407,23 @@ ui <- page_navbar(
     .table-card { margin-top: 0.75rem; }
     .table-card .card-body { overflow: auto; }
     table.dataTable { font-size: 0.88rem; }
+    .about-page { max-width: 900px; margin: 2rem auto 3rem; padding: 0 1rem; }
+    .about-identity { display: flex; align-items: center; gap: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #d9e2e6; }
+    .about-logo { width: 160px; max-width: 42vw; height: auto; flex: 0 0 auto; }
+    .about-title { margin: 0; font-size: 1.7rem; line-height: 1.2; }
+    .about-summary { max-width: 60ch; margin: 0.5rem 0 0; color: #4e5d63; line-height: 1.55; }
+    .about-status { margin: 0.65rem 0 0; color: #5c6970; font-size: 0.9rem; font-weight: 600; }
+    .about-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem; margin-top: 2rem; }
+    .about-section h2 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; }
+    .about-facts { margin: 0; }
+    .about-facts dt { margin-top: 1rem; color: #5c6970; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; }
+    .about-facts dt:first-child { margin-top: 0; }
+    .about-facts dd { margin: 0.25rem 0 0; line-height: 1.45; }
+    .about-link { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.35rem; }
+    @media (max-width: 640px) {
+      .about-identity { align-items: flex-start; flex-direction: column; gap: 1rem; }
+      .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+    }
   ")),
 
   nav_panel(
@@ -3184,6 +3201,63 @@ ui <- page_navbar(
         class = "table-card",
         card_header("Diagnostic du fichier selectionne"),
         card_body(DTOutput("control_file_checks_table", height = "420px"))
+      )
+    )
+  ),
+
+  nav_spacer(),
+
+  nav_panel(
+    title = "A propos",
+    icon = icon("circle-info"),
+    div(
+      class = "about-page",
+      div(
+        class = "about-identity",
+        tags$img(
+          src = "images/leesu-logo.svg",
+          class = "about-logo",
+          alt = "Logo du LEESU"
+        ),
+        div(
+          tags$h1(class = "about-title", "Observatoire HRMS"),
+          tags$p(
+            class = "about-summary",
+            "Application de visualisation et d'analyse de donnees de spectrometrie de masse haute resolution pour l'observation a long terme des eaux usees."
+          ),
+          tags$p(class = "about-status", "Prototype de stage - 2026")
+        )
+      ),
+      div(
+        class = "about-grid",
+        tags$section(
+          class = "about-section",
+          tags$h2("Projet"),
+          tags$dl(
+            class = "about-facts",
+            tags$dt("Developpement"),
+            tags$dd("Selyan Boudahmane - eleve ingenieur ENSIMAG"),
+            tags$dt("Encadrement"),
+            tags$dd("Julien Le Roux - LEESU"),
+            tags$dt("Donnees"),
+            tags$dd("Observatoire de la Ville du SIAAP")
+          )
+        ),
+        tags$section(
+          class = "about-section",
+          tags$h2("Laboratoire"),
+          tags$p(
+            "Laboratoire Eau, Environnement et Systemes Urbains (LEESU)."
+          ),
+          tags$a(
+            href = "https://www.leesu.fr/",
+            target = "_blank",
+            rel = "noopener noreferrer",
+            class = "about-link",
+            icon("arrow-up-right-from-square"),
+            "Site web du LEESU"
+          )
+        )
       )
     )
   )
